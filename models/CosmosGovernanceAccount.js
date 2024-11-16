@@ -1,4 +1,4 @@
-const axios = require('axios');
+const axios = require('@axios');
 const { coins, SigningStargateClient } = require('@cosmjs/stargate');
 
 class CosmosGovernanceAccount {
@@ -28,11 +28,7 @@ class CosmosGovernanceAccount {
 
     async hasNoStakedBalance() {
         const url = `${this.lavaRestHttpEndpoint}/cosmos/staking/v1beta1/delegations/${this.address}`;
-        const response = await axios.get(url, {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
+        const response = await axios.get(url);
 
         if (!response.data.delegation_responses.length) return true;
 
@@ -48,13 +44,9 @@ class CosmosGovernanceAccount {
 
     async getVotingPeriodProposals() {
         const url = `${this.lavaRestHttpEndpoint}/cosmos/gov/v1/proposals`;
-        console.log(url);
 
         try {
             const response = await axios.get(url, {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 params: {
                     'pagination.reverse': true,
                 },
@@ -72,14 +64,9 @@ class CosmosGovernanceAccount {
         const url = `${this.lavaRestHttpEndpoint}/cosmos/gov/v1beta1/proposals/${proposalId}/tally`;
 
         try {
-            const response = await axios.get(url, {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
+            const response = await axios.get(url);
 
             const tally = response.data.tally || {};
-            console.log(tally);
             const voteCounts = {
                 1: parseInt(tally.yes || 0, 10),
                 2: parseInt(tally.abstain || 0, 10),
@@ -115,17 +102,16 @@ class CosmosGovernanceAccount {
             throw new Error(`Transaction failed with code ${result.code}`);
         }
 
-        console.log('Голосование выполнено');
+        console.log('Voting is done.');
     }
 
     async hasVoted(proposalId) {
         try {
             const url = `${this.lavaRestHttpEndpoint}/cosmos/gov/v1beta1/proposals/${proposalId}/votes/${this.address}`;
-            console.log(url);
             const response = await axios.get(url);
 
             if (response.data && response.data.vote) {
-                console.log('Голос уже был подан');
+                console.log('The vote has already been cast.');
                 return true;
             }
         } catch (error) {

@@ -1,6 +1,8 @@
-const { MNEMONIC_LIST, CHAIN_CREDENTIALS_LIST } = require('./config');
-const CosmosWallet = require('./models/CosmosWallet');
-const CosmosGovernanceAccount = require('./models/CosmosGovernanceAccount');
+require('module-alias/register');
+
+const { MNEMONIC_LIST, CHAIN_CREDENTIALS_LIST } = require('@config');
+const CosmosWallet = require('@models/CosmosWallet');
+const CosmosGovernanceAccount = require('@models/CosmosGovernanceAccount');
 
 async function main() {
     for (chainCredentials of CHAIN_CREDENTIALS_LIST) {
@@ -15,7 +17,6 @@ async function main() {
                 mnemonic: mnemonic,
                 addressPrefix: addressPrefix,
             });
-
             const cosmosGovernanceAccount = await CosmosGovernanceAccount.create({
                 lavaRestHttpEndpoint: lavaRestHttpEndpoint,
                 lavaTendermintHttpEndpoint: lavaTendermintHttpEndpoint,
