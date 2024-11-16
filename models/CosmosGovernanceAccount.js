@@ -2,15 +2,16 @@ const axios = require('axios');
 const { coins, SigningStargateClient } = require('@cosmjs/stargate');
 
 class CosmosGovernanceAccount {
-    constructor({ lavaRestHttpEndpoint, lavaTendermintHttpEndpoint, baseDenomination, address, stargateClient }) {
+    constructor({ lavaRestHttpEndpoint, lavaTendermintHttpEndpoint, baseDenomination, address, stargateClient, requiredVotingBalance }) {
         this.lavaRestHttpEndpoint = lavaRestHttpEndpoint;
         this.lavaTendermintHttpEndpoint = lavaTendermintHttpEndpoint;
         this.baseDenomination = baseDenomination;
         this.address = address;
         this.stargateClient = stargateClient;
+        this.requiredVotingBalance = requiredVotingBalance;
     }
 
-    static async create({ lavaRestHttpEndpoint, lavaTendermintHttpEndpoint, baseDenomination, wallet }) {
+    static async create({ lavaRestHttpEndpoint, lavaTendermintHttpEndpoint, baseDenomination, requiredVotingBalance, wallet }) {
         const [account] = await wallet.getAccounts();
         const address = account.address;
         const stargateClient = await SigningStargateClient.connectWithSigner(lavaTendermintHttpEndpoint, wallet);
@@ -20,8 +21,29 @@ class CosmosGovernanceAccount {
             baseDenomination: baseDenomination,
             address: address,
             stargateClient: stargateClient,
+            requiredVotingBalance: requiredVotingBalance,
         });
         return instance;
+    }
+
+    async hasNoStakedBalance() {
+        const url = `${this.lavaRestHttpEndpoint}/cosmos/staking/v1beta1/delegations/${this.address}`;
+        const response = await axios.get(url, {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.data.delegation_responses.length) return true;
+
+        const totalAmount = response.data.delegation_responses.reduce((sum, delegation) => {
+            return sum + parseInt(delegation.balance.amount, 10);
+        }, 0);
+        if (totalAmount < this.requiredVotingBalance) {
+            return true;
+        }
+
+        return false;
     }
 
     async getVotingPeriodProposals() {
@@ -47,7 +69,7 @@ class CosmosGovernanceAccount {
     }
 
     async findDominantVote(proposalId) {
-        const url = `${this.lavaRestHttpEndpoint}/cosmos/gov/v1/proposals/${proposalId}/tally`;
+        const url = `${this.lavaRestHttpEndpoint}/cosmos/gov/v1beta1/proposals/${proposalId}/tally`;
 
         try {
             const response = await axios.get(url, {
@@ -57,11 +79,12 @@ class CosmosGovernanceAccount {
             });
 
             const tally = response.data.tally || {};
+            console.log(tally);
             const voteCounts = {
-                1: parseInt(tally.yes_count || 0, 10),
-                2: parseInt(tally.abstain_count || 0, 10),
-                3: parseInt(tally.no_count || 0, 10),
-                4: parseInt(tally.no_with_veto_count || 0, 10),
+                1: parseInt(tally.yes || 0, 10),
+                2: parseInt(tally.abstain || 0, 10),
+                3: parseInt(tally.no || 0, 10),
+                4: parseInt(tally.no_with_veto || 0, 10),
             };
 
             return Object.keys(voteCounts).reduce((a, b) => (voteCounts[a] > voteCounts[b] ? a : b));
@@ -92,7 +115,7 @@ class CosmosGovernanceAccount {
             throw new Error(`Transaction failed with code ${result.code}`);
         }
 
-        console.log('Transaction successful:');
+        console.log('Голосование выполнено');
     }
 
     async hasVoted(proposalId) {
@@ -102,35 +125,31 @@ class CosmosGovernanceAccount {
             const response = await axios.get(url);
 
             if (response.data && response.data.vote) {
-                console.log('Голос уже был подан:', response.data.vote);
+                console.log('Голос уже был подан');
                 return true;
             }
-
-            return false;
         } catch (error) {
-            if (error.response && error.response.status === 404) {
-                return false;
-            }
-            throw error;
+            return false;
         }
     }
 
     async startAutoVoteProposals() {
-        const proposals = await this.getVotingPeriodProposals();
+        if (await this.hasNoStakedBalance()) {
+            console.log('No staked balance.');
+            return;
+        }
 
+        const proposals = await this.getVotingPeriodProposals();
         if (proposals.length === 0) {
             console.log('No proposals in voting period.');
             return;
         }
-
         for (const proposal of proposals) {
             const dominantVote = await this.findDominantVote(proposal.id);
             console.log(`Proposal ${proposal.id} dominant vote: ${dominantVote}`);
-
             if (await this.hasVoted(proposal.id)) {
                 continue;
             }
-
             await this.voteOnProposal(proposal.id, dominantVote);
         }
     }

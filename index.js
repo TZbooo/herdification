@@ -8,6 +8,7 @@ async function main() {
         const lavaTendermintHttpEndpoint = chainCredentials['LAVA_TENDERMINT_HTTP_ENDPOINT'];
         const baseDenomination = chainCredentials['BASE_DENOMINATION'];
         const addressPrefix = chainCredentials['ADDRESS_PREFIX'];
+        const requiredVotingBalance = chainCredentials['REQUIRED_VOTING_BALANCE'];
 
         for (const mnemonic of MNEMONIC_LIST) {
             const cosmosWallet = await CosmosWallet.create({
@@ -19,12 +20,11 @@ async function main() {
                 lavaRestHttpEndpoint: lavaRestHttpEndpoint,
                 lavaTendermintHttpEndpoint: lavaTendermintHttpEndpoint,
                 baseDenomination: baseDenomination,
+                requiredVotingBalance: requiredVotingBalance,
                 wallet: cosmosWallet.wallet,
             });
             await cosmosGovernanceAccount.startAutoVoteProposals();
         }
-
-        break;
     }
 }
 
