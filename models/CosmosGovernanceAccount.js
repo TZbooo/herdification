@@ -67,6 +67,7 @@ class CosmosGovernanceAccount {
             const response = await axios.get(url);
 
             const tally = response.data.tally || {};
+            console.log(tally);
             const voteCounts = {
                 1: parseInt(tally.yes || 0, 10),
                 2: parseInt(tally.abstain || 0, 10),
