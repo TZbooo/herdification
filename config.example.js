@@ -6,6 +6,7 @@ module.exports = {
             LAVA_TENDERMINT_HTTP_ENDPOINT: 'https://g.w.lavanet.xyz:443/gateway/cosmoshub/rpc-http/0000000000000000000example',
             BASE_DENOMINATION: 'uatom',
             ADDRESS_PREFIX: 'cosmos',
+            REQUIRED_VOTING_BALANCE: 1000000,
         },
     ],
 };

@@ -30,6 +30,7 @@ class CosmosGovernanceAccount {
         const url = `${this.lavaRestHttpEndpoint}/cosmos/staking/v1beta1/delegations/${this.address}`;
         const response = await axios.get(url);
 
+        console.log(response.data.delegation_responses, url);
         if (!response.data.delegation_responses.length) return true;
 
         const totalAmount = response.data.delegation_responses.reduce((sum, delegation) => {
